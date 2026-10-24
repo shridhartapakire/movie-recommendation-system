@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CineMatch wall</title>
+<style>
+:root{
+  --text:#f4f6ff; --muted:#a9b2cc; --violet:#8b5cf6; --blue:#3b82f6; --ember:#f2663b;
+  --panel:#12182b; --gap:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--text);
+  font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+#root{padding:0 2px}
+h1,h2,p{margin:0}
+
+/* ---------- Cards ---------- */
+.card{position:relative;flex:0 0 auto;width:var(--w,190px);aspect-ratio:2/3;margin-right:var(--gap);
+  border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#1b2340,#0e1324);cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.5);outline:none;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s ease}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.card:hover,.card:focus-visible{transform:scale(1.07);z-index:5;
+  box-shadow:0 20px 44px rgba(0,0,0,.7),0 0 0 1px rgba(139,92,246,.7),0 10px 34px rgba(139,92,246,.35)}
+.card .noimg{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:14px;text-align:center;color:#c9d0ea;font-weight:650;font-size:.9rem;
+  background:radial-gradient(circle at 30% 20%,#2b2f66,#12172b 70%)}
+.card.missing .noimg{display:flex}
+.card .noimg i{font-style:normal;font-size:1.8rem;opacity:.8}
+.label{position:absolute;left:0;right:0;bottom:0;padding:34px 10px 9px;
+  background:linear-gradient(to top,rgba(5,8,18,.95),rgba(5,8,18,.6) 55%,transparent);
+  transition:opacity .25s}
+.label b{display:block;font-size:.82rem;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.label span{font-size:.72rem;color:#ffd27a}
+.ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:12px;
+  background:linear-gradient(to top,rgba(6,8,20,.98) 20%,rgba(6,8,20,.72) 65%,rgba(6,8,20,.35));
+  opacity:0;transition:opacity .28s ease}
+.card:hover .ov,.card:focus-visible .ov{opacity:1}
+.card:hover .label,.card:focus-visible .label{opacity:0}
+.ov h3{margin:0;font-size:.95rem;line-height:1.2}
+.ov .m{font-size:.74rem;color:#ffd27a}
+.ov .g{font-size:.7rem;color:#b9c3e6}
+.ov p{font-size:.72rem;line-height:1.35;color:#d3d9ee;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.ov .x{font-size:.68rem;color:#c4b5fd}
+.ov .go{align-self:flex-start;margin-top:2px;font-size:.72rem;font-weight:700;padding:5px 11px;border-radius:99px;
+  background:linear-gradient(90deg,var(--violet),var(--ember));color:#fff}
+
+/* ---------- Animated rows ---------- */
+.row{margin:0 0 4px}
+.row h2{font-size:1.2rem;font-weight:750;letter-spacing:.2px;padding:0 4px}
+.row .sub{font-size:.78rem;color:var(--muted);padding:2px 4px 0}
+.viewport{overflow:hidden;padding:18px 0 20px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.track{display:flex;width:max-content;animation:slide var(--dur,60s) linear infinite;will-change:transform}
+.row.rev .track{animation-direction:reverse}
+.row:hover .track,.row:focus-within .track{animation-play-state:paused}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ---------- Grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--gw,170px),1fr));gap:22px 18px;padding:14px 6px 20px}
+.grid .card{width:100%;margin:0}
+
+/* ---------- Carousel ---------- */
+.car{position:relative;margin-bottom:6px}
+.car h2{font-size:1.2rem;font-weight:750;padding:0 4px}
+.scroller{display:flex;overflow-x:auto;scroll-snap-type:x proximity;padding:18px 6px 22px;scroll-behavior:smooth;scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.scroller .card{scroll-snap-align:start}
+.arrow{position:absolute;top:50%;transform:translateY(-35%);z-index:8;width:42px;height:68px;border:0;border-radius:10px;
+  background:rgba(8,11,24,.82);color:#fff;font-size:1.5rem;cursor:pointer;opacity:0;transition:opacity .2s,background .2s}
+.car:hover .arrow{opacity:1}.arrow:hover{background:rgba(139,92,246,.85)}
+.arrow.l{left:0}.arrow.r{right:0}
+
+/* ---------- Hero / detail ---------- */
+.hero{position:relative;border-radius:22px;overflow:hidden;min-height:470px;display:flex;align-items:center;
+  background:linear-gradient(120deg,#16204a,#35205a 55%,#4a1f2c);
+  box-shadow:0 20px 60px rgba(0,0,0,.55);isolation:isolate}
+.hero.detail{min-height:0}
+.bd{position:absolute;inset:0;z-index:-3;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .9s ease}
+.bd.on{opacity:1}.bd.blur{filter:blur(34px) saturate(1.3);transform:scale(1.25)}
+.shade{position:absolute;inset:0;z-index:-2;
+  background:linear-gradient(90deg,rgba(7,11,22,.96) 0%,rgba(7,11,22,.78) 38%,rgba(7,11,22,.25) 75%,rgba(7,11,22,.55) 100%),
+             linear-gradient(to top,rgba(7,11,22,.95),transparent 40%)}
+.glow{position:absolute;right:-8%;top:-30%;width:55%;height:120%;z-index:-1;
+  background:radial-gradient(circle,rgba(242,102,59,.22),transparent 60%)}
+.hero-in{display:flex;gap:44px;align-items:center;justify-content:space-between;width:100%;padding:44px 52px}
+.txt{max-width:680px;animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.badge{display:inline-block;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fff;
+  padding:5px 12px;border-radius:99px;background:linear-gradient(90deg,var(--ember),#e5484d);margin-bottom:14px}
+.hero h1{font-size:clamp(1.9rem,4.2vw,3.3rem);line-height:1.05;font-weight:850;letter-spacing:-.5px;margin-bottom:10px}
+.hero h1 small{font-weight:500;color:var(--muted);font-size:.5em;margin-left:8px}
+.tag{font-style:italic;color:#c4b5fd;margin-bottom:10px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;color:#d5dbf2;font-size:.92rem;margin-bottom:12px}
+.meta .star{color:#ffd27a;font-weight:750}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{font-size:.76rem;padding:4px 12px;border-radius:99px;border:1px solid rgba(167,139,250,.45);
+  background:rgba(139,92,246,.14);color:#e3dcff}
+.hero p.ov-t{font-size:1rem;line-height:1.6;color:#dde2f5;margin-bottom:22px;max-width:62ch}
+.btn{border:0;cursor:pointer;font:inherit;font-weight:750;font-size:.98rem;color:#fff;padding:13px 26px;border-radius:12px;
+  background:linear-gradient(90deg,var(--violet),var(--ember));box-shadow:0 10px 28px rgba(139,92,246,.4);
+  transition:transform .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(242,102,59,.45)}
+.hposter{flex:0 0 auto;width:clamp(170px,22vw,290px);aspect-ratio:2/3;border-radius:16px;overflow:hidden;position:relative;
+  background:linear-gradient(160deg,#1b2340,#0e1324);box-shadow:0 26px 60px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.08);
+  animation:rise .9s .1s cubic-bezier(.2,.8,.2,1) both}
+.hposter img{width:100%;height:100%;object-fit:cover;display:block}
+.hposter .noimg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:16px;text-align:center;
+  font-weight:700;color:#c9d0ea;background:radial-gradient(circle at 30% 20%,#2b2f66,#12172b 70%)}
+.hposter.missing .noimg{display:flex}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 22px;margin-top:4px}
+.facts div{font-size:.78rem;color:var(--muted)}
+.facts b{display:block;font-size:.95rem;color:var(--text);font-weight:650}
+
+.empty{padding:40px;text-align:center;color:var(--muted)}
+
+@media (max-width:760px){
+  .hero-in{padding:28px 22px;gap:20px}.hposter{display:none}.hero{min-height:380px}
+  .arrow{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .track{animation:none!important}.viewport{overflow-x:auto;-webkit-mask-image:none;mask-image:none}
+  .dup{display:none}.card,.txt,.hposter,.btn,.bd{transition:none!important;animation:none!important}
+  .card:hover,.card:focus-visible{transform:none}.scroller{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ===== Streamlit component protocol (no build step / no npm needed) ===== */
+function post(type, data){ window.parent.postMessage(Object.assign({isStreamlitMessage:true,type:type}, data||{}), "*"); }
+let lastHeight = 0;
+function fitFrame(){
+  const h = Math.ceil(document.getElementById("root").getBoundingClientRect().height) + 4;
+  if (h !== lastHeight){ lastHeight = h; post("streamlit:setFrameHeight", {height:h}); }
+}
+function emit(item){
+  post("streamlit:setComponentValue", {
+    dataType:"json",
+    value:{title:item.title, year:item.year || null, id:Date.now()+"-"+Math.random().toString(36).slice(2)}
+  });
+}
+
+/* ===== Small DOM helpers (all data goes through textContent: no HTML injection) ===== */
+function el(tag, cls, text){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+const ratingText = r => (typeof r === "number" && r > 0) ? "★ " + r.toFixed(1) : "Not rated";
+
+/* Poster with a fallback chain: current TMDB poster -> dataset poster -> styled placeholder. */
+function loadImage(box, sources, alt, eager){
+  const list = (sources || []).filter(Boolean).filter((s,i,a) => a.indexOf(s) === i);
+  if (!list.length){ box.classList.add("missing"); return; }
+  let i = 0;
+  const img = new Image();
+  img.alt = alt; img.decoding = "async"; if (!eager) img.loading = "lazy";
+  img.onerror = () => { i++; if (i < list.length) img.src = list[i]; else { img.remove(); box.classList.add("missing"); } };
+  img.src = list[0];
+  box.insertBefore(img, box.firstChild);
+}
+
+function makeCard(item, opts){
+  opts = opts || {};
+  const c = el("div", "card");
+  c.setAttribute("role", "button");
+  c.tabIndex = opts.hidden ? -1 : 0;
+  if (opts.hidden) c.setAttribute("aria-hidden", "true");
+  c.setAttribute("aria-label", "Open details for " + item.title);
+
+  const ph = el("div", "noimg"); ph.append(el("i", null, "🎬"), el("span", null, item.title));
+  c.append(ph);
+  loadImage(c, [item.poster, item.fallback], item.title + " poster", opts.eager);
+
+  const lab = el("div", "label");
+  lab.append(el("b", null, item.title), el("span", null, ratingText(item.rating)));
+  c.append(lab);
+
+  const ov = el("div", "ov");
+  ov.append(el("h3", null, item.title));
+  ov.append(el("div", "m", [item.year, ratingText(item.rating)].filter(Boolean).join("  ·  ")));
+  if (item.genres && item.genres.length) ov.append(el("div", "g", item.genres.slice(0,3).join(" • ")));
+  if (item.overview) ov.append(el("p", null, item.overview));
+  if (item.extra) ov.append(el("div", "x", item.extra));
+  ov.append(el("span", "go", "View details ›"));
+  c.append(ov);
+
+  c.addEventListener("click", () => emit(item));
+  c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); emit(item); } });
+  return c;
+}
+
+/* ===== Renderers ===== */
+function renderRows(a){
+  const root = document.getElementById("root"); root.replaceChildren();
+  const rows = (a.rows || []).filter(r => r.items && r.items.length);
+  if (!rows.length){ root.append(el("div","empty","No movies to show yet.")); return; }
+
+  const widths = [1, .9, 1.06, .94, 1.02];          // slightly different card sizes per row = depth
+  const speeds = [62, 42, 78, 50, 68];              // px per second, layered speeds
+  rows.forEach((r, idx) => {
+    const row = el("section", "row" + (idx % 2 ? " rev" : ""));       // adjacent rows run in opposite directions
+    row.append(el("h2", null, r.title));
+    if (r.subtitle) row.append(el("div", "sub", r.subtitle));
+    const vp = el("div", "viewport"), track = el("div", "track");
+    vp.style.setProperty("--w", "clamp(140px," + (14.5 * widths[idx % 5]).toFixed(1) + "vw," + Math.round(200 * widths[idx % 5]) + "px)");
+
+    /* Repeat the list until one "set" is wider than a wide screen, then add an identical second set.
+       Each card has its own right margin, so both sets are exactly equal width => translateX(-50%) loops with no jump. */
+    let set = r.items.slice();
+    while (set.length < 16) set = set.concat(r.items);
+    set.forEach(it => track.append(makeCard(it, {eager:true})));
+    set.forEach(it => { const c = makeCard(it, {eager:true, hidden:true}); c.classList.add("dup"); track.append(c); });
+
+    vp.append(track); row.append(vp); root.append(row);
+    requestAnimationFrame(() => {
+      const half = track.scrollWidth / 2;
+      track.style.setProperty("--dur", Math.max(25, half / speeds[idx % 5]).toFixed(1) + "s");
+    });
+  });
+}
+
+function renderGrid(a){
+  const root = document.getElementById("root"); root.replaceChildren();
+  const items = a.items || [];
+  if (!items.length){ root.append(el("div","empty","No movies found.")); return; }
+  const g = el("div","grid");
+  g.style.setProperty("--gw", (a.min_width || 170) + "px");
+  items.forEach(it => g.append(makeCard(it)));
+  root.append(g);
+}
+
+function renderCarousel(a){
+  const root = document.getElementById("root"); root.replaceChildren();
+  const items = a.items || [];
+  if (!items.length){ root.append(el("div","empty","No similar movies found.")); return; }
+  const car = el("section","car");
+  if (a.title) car.append(el("h2", null, a.title));
+  const sc = el("div","scroller");
+  sc.style.setProperty("--w", "clamp(140px,14vw,190px)");
+  items.forEach(it => sc.append(makeCard(it)));
+  const l = el("button","arrow l","‹"), r = el("button","arrow r","›");
+  l.setAttribute("aria-label","Scroll left"); r.setAttribute("aria-label","Scroll right");
+  l.onclick = () => sc.scrollBy({left:-sc.clientWidth*.8});
+  r.onclick = () => sc.scrollBy({left: sc.clientWidth*.8});
+  car.append(sc, l, r); root.append(car);
+}
+
+function chips(list){ const c = el("div","chips"); (list||[]).forEach(g => c.append(el("span","chip",g))); return c; }
+
+function renderHero(a, detail){
+  const m = a.movie, root = document.getElementById("root"); root.replaceChildren();
+  if (!m){ root.append(el("div","empty","Nothing to feature yet.")); return; }
+  const hero = el("section","hero" + (detail ? " detail" : ""));
+  const bd = el("div","bd"); hero.append(bd, el("div","shade"), el("div","glow"));
+
+  /* Backdrop chain: TMDB backdrop -> blurred poster -> gradient only */
+  if (m.backdrop){
+    const t = new Image();
+    t.onload = () => { bd.style.backgroundImage = 'url("' + m.backdrop + '")'; bd.classList.add("on"); };
+    t.onerror = () => blurFromPoster();
+    t.src = m.backdrop;
+  } else blurFromPoster();
+  function blurFromPoster(){
+    const src = m.poster || m.fallback; if (!src) return;
+    const t = new Image();
+    t.onload = () => { bd.style.backgroundImage = 'url("' + src + '")'; bd.classList.add("blur","on"); };
+    t.src = src;
+  }
+
+  const inner = el("div","hero-in"), txt = el("div","txt");
+  if (!detail) txt.append(el("span","badge","Featured Today"));
+  const h1 = el("h1", null, m.title); if (m.year) h1.append(el("small", null, "(" + m.year + ")"));
+  txt.append(h1);
+  if (detail && m.tagline) txt.append(el("div","tag",m.tagline));
+  const meta = el("div","meta");
+  meta.append(el("span","star",ratingText(m.rating)));
+  if (m.runtime) meta.append(el("span",null,m.runtime + " min"));
+  if (detail && m.votes) meta.append(el("span",null,m.votes.toLocaleString() + " votes"));
+  txt.append(meta, chips(m.genres));
+  txt.append(el("p","ov-t", m.overview || "No overview available."));
+
+  if (detail && a.facts && a.facts.length){
+    const f = el("div","facts");
+    a.facts.forEach(([k,v]) => { const d = el("div",null,k); d.append(el("b",null,v)); f.append(d); });
+    txt.append(f);
+  }
+  if (!detail){
+    const b = el("button","btn","▶  View Details");
+    b.onclick = () => emit(m); txt.append(b);
+  }
+  const poster = el("div","hposter"); poster.append(el("div","noimg",m.title));
+  loadImage(poster, [m.poster, m.fallback], m.title + " poster", true);
+  inner.append(txt, poster); hero.append(inner); root.append(hero);
+}
+
+/* ===== Entry point: re-render only when arguments actually change, so Streamlit reruns never restart animations ===== */
+let lastArgs = null;
+window.addEventListener("message", ev => {
+  if (!ev.data || ev.data.type !== "streamlit:render") return;
+  const a = ev.data.args || {}, sig = JSON.stringify(a);
+  if (sig === lastArgs) return;
+  lastArgs = sig;
+  ({rows:renderRows, grid:renderGrid, carousel:renderCarousel,
+    hero:x => renderHero(x,false), detail:x => renderHero(x,true)}[a.kind] || renderGrid)(a);
+  fitFrame();
+});
+new ResizeObserver(fitFrame).observe(document.getElementById("root"));
+post("streamlit:componentReady", {apiVersion:1});
+</script>
+</body>
+</html>

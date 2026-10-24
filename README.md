@@ -10,6 +10,9 @@ CineMatch is a content-based movie discovery application built with Python, Fast
 - Retrieve updated movie poster paths from The Movie Database (TMDB).
 - Cache poster lookups to reduce repeated API requests.
 - Separate FastAPI backend and Streamlit frontend.
+- Cinematic home page: featured hero plus five animated poster rows moving in alternating directions (hover pauses a row, reduced-motion is respected).
+- Discover (genre and sort), Trending, and Search pages.
+- "Because You Watched" and "Recommended For You" rows personalised from the titles you open, using the same TF-IDF model.
 
 ## Tech Stack
 
@@ -25,12 +28,16 @@ CineMatch is a content-based movie discovery application built with Python, Fast
 
 ```text
 movie-recommendation-system/
-├── app.py
-├── main.py
+├── app.py                      # Streamlit UI (pages, navigation, session state)
+├── components/cinematch_wall/  # local Streamlit component (hero, poster rows, grids, carousels)
+│   └── index.html
+├── .streamlit/config.toml      # dark theme
+├── main.py                     # FastAPI backend
 ├── recommender.py
 ├── build_model.py
 ├── test_recommender.py
 ├── test_saved_model.py
+├── test_api.py
 ├── movie_recommendation.ipynb
 ├── requirements.txt
 ├── README.md
@@ -114,6 +121,25 @@ python -m streamlit run app.py
 
 Open the local URL displayed by Streamlit.
 
+## API Endpoints
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /search?query=&limit=` | Title search (exact matches first, then most-voted) |
+| `GET /movie?title=&year=` | Details for one movie (`year` is optional and disambiguates remakes) |
+| `GET /recommend?title=&year=&limit=` | TF-IDF similar movies |
+| `GET /home?watched=&per_row=` | Featured movie and the five home rows |
+| `GET /browse?genre=&sort=&limit=` | Discover / Trending (`sort`: popularity, rating, votes, newest) |
+| `GET /genres` | Genres with movie counts |
+| `GET /health` | Status (reports whether a TMDB token is configured, never the token) |
+
+## Posters
+
+Poster and backdrop paths are refreshed from TMDB on the server, in parallel, with a short timeout and a cache.
+Failed lookups are retried after five minutes, and lookups pause for a minute if TMDB is unreachable.
+The browser loads images straight from the TMDB image CDN, trying the current poster, then the dataset poster, then a styled placeholder.
+The TMDB token is only used by the FastAPI process. The dataset has no backdrop images, so hero backdrops come from TMDB only and fall back to a blurred poster.
+
 ## Testing
 
 Validate the saved model:
@@ -129,6 +155,12 @@ python test_recommender.py
 ```
 
 The recommendation test script rebuilds the model and therefore requires the local dataset.
+
+Run the API checks (TMDB is mocked, so no network or token is needed; requires `pip install httpx`):
+
+```bash
+python test_api.py
+```
 
 ## How Recommendations Work
 
