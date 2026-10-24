@@ -1,41 +1,51 @@
-# 🎬 Movie Recommendation System
+# 🎬 CineMatch — Movie Recommendation System
 
-A content-based movie recommendation application built with Python, Pandas, Scikit-learn, and Streamlit.
-
-The application recommends movies based on similarities between their genres and plot descriptions using TF-IDF vectorization and cosine similarity.
+CineMatch is a content-based movie discovery application built with Python, FastAPI, Streamlit, Pandas, and Scikit-learn. It helps users search a large movie dataset, explore movie details, and discover similar movies using a TF-IDF recommendation model.
 
 ## Features
 
-- Search and select movies from a dataset of over 45,000 movies.
-- Get recommendations for similar movies.
-- Select a release year when multiple movies share the same title.
-- Choose how many recommendations to display.
-- View movie genres and similarity scores.
+- Search a dataset of more than 45,000 movies.
+- View movie details, including genres, release date, ratings, and overview.
+- Get similar movie recommendations using TF-IDF and cosine similarity.
+- Retrieve updated movie poster paths from The Movie Database (TMDB).
+- Cache poster lookups to reduce repeated API requests.
+- Separate FastAPI backend and Streamlit frontend.
 
-## Technologies Used
+## Tech Stack
 
 - Python
+- FastAPI and Uvicorn
+- Streamlit
 - Pandas and NumPy
 - Scikit-learn
-- TF-IDF Vectorization
-- Cosine Similarity
-- Streamlit
+- TF-IDF and cosine similarity
+- TMDB API
 
 ## Project Structure
 
 ```text
 movie-recommendation-system/
 ├── app.py
+├── main.py
 ├── recommender.py
+├── build_model.py
 ├── test_recommender.py
+├── test_saved_model.py
+├── movie_recommendation.ipynb
 ├── requirements.txt
 ├── README.md
-└── movie_recommendation.ipynb
+└── .gitignore
 ```
 
-The movie dataset (`movies_metadata.csv`) is required to run the application but is not included in the repository.
+The local `model/` directory contains generated model artifacts. The dataset, model artifacts, and `.env` file are not included in Git.
 
-## Setup and Installation
+## Requirements
+
+- Python compatible with the installed project dependencies
+- The movie metadata CSV used to build the recommendation model
+- A TMDB bearer token for current poster lookups
+
+## Setup
 
 ### 1. Clone the repository
 
@@ -47,35 +57,94 @@ cd movie-recommendation-system
 ### 2. Install dependencies
 
 ```bash
+python -m venv .venv
+```
+
+Activate the environment in PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Install the requirements:
+
+```bash
 python -m pip install -r requirements.txt
 ```
 
-### 3. Add the dataset
+### 3. Add the movie dataset
 
-Place `movies_metadata.csv` in the project root directory, alongside `app.py`.
+Place `movies_metadata.csv` in the project root.
 
-### 4. Run the application
+### 4. Build the model artifacts
+
+```bash
+python build_model.py
+```
+
+This creates the files required by the API inside the local `model/` directory.
+
+### 5. Configure TMDB
+
+Create a `.env` file in the project root:
+
+```text
+TMDB_BEARER_TOKEN=your_tmdb_bearer_token
+```
+
+Keep this file private. Never commit your real token to GitHub.
+
+### 6. Start the FastAPI backend
+
+```bash
+uvicorn main:app --reload
+```
+
+API documentation is available at:
+
+`http://127.0.0.1:8000/docs`
+
+### 7. Start the Streamlit frontend
+
+Open a second terminal, activate the same virtual environment, and run:
 
 ```bash
 python -m streamlit run app.py
 ```
 
-Open the local URL displayed in your terminal.
+Open the local URL displayed by Streamlit.
 
-## How It Works
+## Testing
+
+Validate the saved model:
+
+```bash
+python test_saved_model.py
+```
+
+Run the recommendation tests:
+
+```bash
+python test_recommender.py
+```
+
+The recommendation test script rebuilds the model and therefore requires the local dataset.
+
+## How Recommendations Work
 
 1. Movie metadata is cleaned and prepared.
-2. Genre names are weighted by including them twice in the text representation.
-3. TF-IDF converts movie descriptions and genres into numerical feature vectors.
-4. Cosine similarity measures how similar movies are.
-5. The application displays the highest-scoring recommendations.
+2. Genres and plot descriptions are combined into text features.
+3. TF-IDF converts the text into numerical vectors.
+4. Cosine similarity measures the similarity between movie vectors.
+5. The API returns movies with the highest similarity scores.
 
 ## Future Improvements
 
-- Add movie posters and richer movie details.
-- Improve recommendation relevance.
-- Deploy the application online.
-- Add automated tests.
+- Animated horizontal movie poster carousels.
+- Improved poster availability and caching.
+- Faster search and recommendation responses.
+- Automated API tests.
+- Deployment of the backend and frontend.
 
 ## Author
 

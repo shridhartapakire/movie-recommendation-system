@@ -1,4 +1,22 @@
 
+# Secrets
+.env
+.env.*
+
+# Python
 __pycache__/
 *.py[cod]
+.venv/
+venv/
+
+# Generated model artifacts
+model/
+
+# Large local dataset
 movies_metadata.csv
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
