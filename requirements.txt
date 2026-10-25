@@ -1,4 +1,3 @@
-
 fastapi
 uvicorn[standard]
 requests
@@ -7,3 +6,4 @@ pandas
 numpy
 scikit-learn
 streamlit
+huggingface_hub

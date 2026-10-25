@@ -41,6 +41,98 @@ TMDB_HEADERS = {
 }
 
 # -------------------------
+# Get the saved model files (download from Hugging Face if missing)
+# -------------------------
+MODEL_FILES = ("movies.pkl", "tfidf_matrix.pkl", "tfidf.pkl")
+
+
+def ensure_model_files():
+    """
+    Make sure the three model files exist in MODEL_DIR.
+
+    Local development: the files already exist, so nothing is downloaded.
+    Deployment (e.g. Render): the files are not in Git, so they are downloaded
+    once at startup from a Hugging Face repo configured with these variables:
+      HF_MODEL_REPO  e.g. "your-username/your-model-repo"
+      HF_TOKEN       read token (only needed when the repo is private)
+    The token is never printed or logged.
+    """
+    missing = [name for name in MODEL_FILES if not (MODEL_DIR / name).is_file()]
+    if not missing:
+        return
+
+    repo_id = (os.getenv("HF_MODEL_REPO") or "").strip()
+    token = (os.getenv("HF_TOKEN") or "").strip() or None
+
+    if not repo_id:
+        raise RuntimeError(
+            f"Model files are missing ({', '.join(missing)}) and HF_MODEL_REPO is not set. "
+            "Locally, run `python build_model.py`. On Render, set the HF_MODEL_REPO "
+            "environment variable to your Hugging Face repo (username/repo-name)."
+        )
+
+    try:
+        from huggingface_hub import hf_hub_download
+        from huggingface_hub.errors import (
+            EntryNotFoundError,
+            HfHubHTTPError,
+            RepositoryNotFoundError,
+        )
+    except ImportError as exc:
+        raise RuntimeError(
+            "The 'huggingface_hub' package is required to download the model files. "
+            "Add it to requirements.txt."
+        ) from exc
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+    for name in missing:
+        print(f"Downloading {name} from Hugging Face repo '{repo_id}'...", flush=True)
+        try:
+            hf_hub_download(
+                repo_id=repo_id,
+                filename=name,
+                token=token,
+                local_dir=MODEL_DIR,
+            )
+        except RepositoryNotFoundError as exc:
+            hint = (
+                "HF_TOKEN is not set, which is required for a private repo."
+                if token is None
+                else "Check HF_MODEL_REPO for typos and that the token can read this repo."
+            )
+            raise RuntimeError(
+                f"Hugging Face repo '{repo_id}' was not found or is not accessible. {hint}"
+            ) from exc
+        except EntryNotFoundError as exc:
+            raise RuntimeError(
+                f"'{name}' does not exist in Hugging Face repo '{repo_id}'. "
+                f"The repo must contain: {', '.join(MODEL_FILES)}."
+            ) from exc
+        except HfHubHTTPError as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            reason = (
+                "authentication failed. The HF_TOKEN is invalid, expired or lacks read access"
+                if status in (401, 403)
+                else f"Hugging Face returned HTTP {status}"
+            )
+            raise RuntimeError(f"Could not download '{name}': {reason}.") from exc
+        except Exception as exc:  # network errors, full disk, etc.
+            raise RuntimeError(
+                f"Could not download '{name}' from Hugging Face ({type(exc).__name__}). "
+                "Check the network connection and available disk space."
+            ) from exc
+
+    still_missing = [name for name in MODEL_FILES if not (MODEL_DIR / name).is_file()]
+    if still_missing:
+        raise RuntimeError(
+            f"Download finished but files are still missing: {', '.join(still_missing)}"
+        )
+
+
+ensure_model_files()
+
+# -------------------------
 # Load saved model files
 # -------------------------
 try:
@@ -196,7 +288,9 @@ def tmdb_images(tmdb_id):
         if _breaker["fails"] >= _BREAKER_FAILS:
             _breaker["until"] = time.time() + _BREAKER_PAUSE
             _breaker["fails"] = 0
-            logger.warning("TMDB unreachable (%s); pausing lookups.", type(exc).__name__)
+            logger.warning(
+                "TMDB unreachable (%s); pausing lookups.", type(exc).__name__
+            )
         _cache_put(movie_id, None, _TTL_FAILED)
         return None
 
@@ -214,7 +308,9 @@ def tmdb_images(tmdb_id):
     if response.status_code == 404:
         _cache_put(movie_id, None, _TTL_MISSING)
     else:
-        logger.warning("TMDB returned HTTP %s for movie %s", response.status_code, movie_id)
+        logger.warning(
+            "TMDB returned HTTP %s for movie %s", response.status_code, movie_id
+        )
         _cache_put(movie_id, None, _TTL_FAILED)
     return None
 
@@ -397,7 +493,9 @@ def search_movies(
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
     titles = movies["title"].fillna("").astype(str)
-    hits = np.flatnonzero(titles.str.contains(query, case=False, regex=False).to_numpy())
+    hits = np.flatnonzero(
+        titles.str.contains(query, case=False, regex=False).to_numpy()
+    )
 
     exact = (_title_cf.to_numpy()[hits] == query.casefold()).astype(int)
     order = np.lexsort((-_votes[hits], -exact))
@@ -462,7 +560,10 @@ def list_genres():
     """Genres present in the dataset, with movie counts."""
     return {
         "genres": sorted(
-            ({"name": name, "count": int(mask.sum())} for name, mask in _genre_masks.items()),
+            (
+                {"name": name, "count": int(mask.sum())}
+                for name, mask in _genre_masks.items()
+            ),
             key=lambda g: -g["count"],
         )
     }
@@ -527,7 +628,9 @@ def home_feed(
     candidates = pick_top(
         _popularity,
         25,
-        mask=_showable & (_votes >= 50) & (movies["overview"].astype(str).str.len() > 60).to_numpy(),
+        mask=_showable
+        & (_votes >= 50)
+        & (movies["overview"].astype(str).str.len() > 60).to_numpy(),
     )
     hero_index = candidates[date.today().toordinal() % len(candidates)]
     used = {hero_index, *seeds}
@@ -571,21 +674,30 @@ def home_feed(
         "top_rated",
         "Top Rated",
         "Weighted by rating and number of votes",
-        pick_top(_weighted, per_row, exclude=used, mask=_showable & (_votes >= _min_votes)),
+        pick_top(
+            _weighted, per_row, exclude=used, mask=_showable & (_votes >= _min_votes)
+        ),
     )
 
     if seeds:
         centroid_seeds = seeds
-        rec_title, rec_sub = "Recommended For You", "Based on movies you recently opened"
+        rec_title, rec_sub = (
+            "Recommended For You",
+            "Based on movies you recently opened",
+        )
     else:
         centroid_seeds = pick_top(_popularity, 3, exclude=used)
         rec_title = "Hand-Picked Recommendations"
-        rec_sub = "Based on today's popular movies. Open a few titles to personalise this row"
+        rec_sub = (
+            "Based on today's popular movies. Open a few titles to personalise this row"
+        )
     add_row(
         "recommended",
         rec_title,
         rec_sub,
-        pick_top(similarity_to(centroid_seeds), per_row, exclude=used | set(centroid_seeds)),
+        pick_top(
+            similarity_to(centroid_seeds), per_row, exclude=used | set(centroid_seeds)
+        ),
     )
 
     add_row(

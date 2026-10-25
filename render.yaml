@@ -5,3 +5,14 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: HF_MODEL_REPO
+        value: shridhartapakire/cinematch-model-files
+      # Secrets: values are entered in the Render dashboard, never stored in Git.
+      - key: HF_TOKEN
+        sync: false
+      - key: TMDB_BEARER_TOKEN
+        sync: false
